@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visualização do Bubble Sort</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .array-bar {
+      transition: height 0.2s ease, background-color 0.2s ease;
+    }
+    .array-bar.comparing { background-color: #f59e0b; }
+    .array-bar.swapping { background-color: #ef4444; }
+    .array-bar.sorted { background-color: #22c55e; }
+  </style>
+</head>
+<body class="bg-blue-50 min-h-screen flex flex-col items-center justify-center p-6 text-gray-800 font-sans">
+
+  <h1 class="text-4xl font-bold mb-2 text-blue-900">👨‍💻 Visualização do Bubble Sort</h1>
+  <p class="mb-6 text-center max-w-2xl text-lg">
+    Veja como o algoritmo Bubble Sort ordena os valores! Barras laranja são comparações, vermelhas são trocas, e verdes estão na posição correta.
+  </p>
+
+  <div class="flex flex-wrap gap-3 mb-4 justify-center items-center">
+    <input id="arrayInput" type="text" class="border rounded px-4 py-2 text-center text-sm w-52 shadow" placeholder="Ex: 5,1,4,2,8" value="64,34,25,12,22,11,90" />
+    
+    <button id="generateArrayBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold shadow">
+      🔁 Novo Array
+    </button>
+
+    <button id="sortBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow">
+      ▶️ Iniciar Ordenação
+    </button>
+
+    <button id="resetBtn" disabled class="bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold shadow cursor-not-allowed">
+      🔄 Reiniciar
+    </button>
+
+    <div class="flex items-center gap-2">
+      <input type="range" id="speedSlider" min="10" max="500" value="100" class="w-40 accent-blue-500">
+      <span id="speedValue" class="text-sm">Velocidade: 100ms</span>
+    </div>
+  </div>
+
+  <div id="arrayContainer" class="bg-white rounded-lg shadow-lg flex items-end justify-center gap-1 p-4 w-full max-w-5xl h-[500px] overflow-x-auto">
+    <!-- As barras serão inseridas aqui -->
+  </div>
+
+  <script>
+    const arrayContainer = document.getElementById('arrayContainer');
+    const sortBtn = document.getElementById('sortBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const generateArrayBtn = document.getElementById('generateArrayBtn');
+    const arrayInput = document.getElementById('arrayInput');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValueSpan = document.getElementById('speedValue');
+
+    let originalArray = [];
+    let currentArray = [];
+    let animationSpeed = parseInt(speedSlider.value);
+    let isSorting = false;
+
+    function generateArrayFromInput() {
+      const inputValue = arrayInput.value.trim();
+      const newArray = inputValue.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+      return newArray.length ? newArray : [50, 30, 90, 20, 10];
+    }
+
+    function renderArray(arr, maxVal) {
+      arrayContainer.innerHTML = '';
+      arr.forEach((value, index) => {
+        const bar = document.createElement('div');
+        bar.classList.add('array-bar', 'w-10', 'bg-blue-500', 'rounded-t', 'text-white', 'text-xs', 'flex', 'items-end', 'justify-center', 'pb-1');
+        bar.style.height = `${(value / maxVal) * 500}px`;
+        bar.textContent = value;
+        bar.dataset.value = value;
+        bar.dataset.index = index;
+        arrayContainer.appendChild(bar);
+      });
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function swapBars(bar1, bar2) {
+      bar1.classList.add('swapping');
+      bar2.classList.add('swapping');
+      if (bar1.nextSibling === bar2) {
+        arrayContainer.insertBefore(bar2, bar1);
+      } else {
+        const temp = document.createElement('div');
+        arrayContainer.insertBefore(temp, bar1);
+        arrayContainer.insertBefore(bar1, bar2);
+        arrayContainer.insertBefore(bar2, temp);
+        arrayContainer.removeChild(temp);
+      }
+      await sleep(animationSpeed);
+      bar1.classList.remove('swapping');
+      bar2.classList.remove('swapping');
+    }
+
+    async function bubbleSortVisual(arr) {
+      isSorting = true;
+      sortBtn.disabled = true;
+      generateArrayBtn.disabled = true;
+      arrayInput.disabled = true;
+      resetBtn.disabled = false;
+      resetBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+      resetBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+
+      const n = arr.length;
+      const bars = Array.from(arrayContainer.children);
+
+      for (let j = 0; j < n - 1; j++) {
+        let swapped = false;
+        for (let i = 0; i < n - 1 - j; i++) {
+          const bar1 = bars[i];
+          const bar2 = bars[i + 1];
+
+          bar1.classList.add('comparing');
+          bar2.classList.add('comparing');
+          await sleep(animationSpeed);
+
+          const val1 = parseInt(bar1.dataset.value);
+          const val2 = parseInt(bar2.dataset.value);
+
+          if (val1 > val2) {
+            [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+            await swapBars(bar1, bar2);
+            [bars[i], bars[i + 1]] = [bars[i + 1], bars[i]];
+            swapped = true;
+          }
+
+          bar1.classList.remove('comparing');
+          bar2.classList.remove('comparing');
+        }
+
+        if (bars[n - 1 - j]) {
+          bars[n - 1 - j].classList.add('sorted');
+        }
+
+        if (!swapped) break;
+      }
+
+      bars.forEach(bar => {
+        if (!bar.classList.contains('sorted')) {
+          bar.classList.add('sorted');
+        }
+      });
+
+      isSorting = false;
+      sortBtn.disabled = false;
+      generateArrayBtn.disabled = false;
+      arrayInput.disabled = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentArray = generateArrayFromInput();
+      originalArray = [...currentArray];
+      const maxVal = Math.max(...currentArray);
+      renderArray(currentArray, maxVal);
+    });
+
+    generateArrayBtn.addEventListener('click', () => {
+      if (isSorting) return;
+      currentArray = generateArrayFromInput();
+      originalArray = [...currentArray];
+      const maxVal = Math.max(...currentArray);
+      renderArray(currentArray, maxVal);
+      resetBtn.disabled = true;
+      resetBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+      resetBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+      sortBtn.disabled = false;
+    });
+
+    sortBtn.addEventListener('click', () => {
+      if (!isSorting) bubbleSortVisual(currentArray);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (isSorting) return;
+      currentArray = [...originalArray];
+      const maxVal = Math.max(...currentArray);
+      renderArray(currentArray, maxVal);
+      resetBtn.disabled = true;
+      resetBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+      resetBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+      sortBtn.disabled = false;
+    });
+
+    speedSlider.addEventListener('input', (event) => {
+      animationSpeed = parseInt(event.target.value);
+      speedValueSpan.textContent = `Velocidade: ${animationSpeed}ms`;
+    });
+  </script>
+</body>
+</html>
